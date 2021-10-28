@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Mappings: 
+  RegionMap:
+    us-east-1:
+      AmaznLinux2: "ami-02e136e904f3da870"
+      UbuntuSV20: "ami-0d4fb65189c3b8d49"
+    us-west-1:
+      AmaznLinux2: "ami-074cce78125f09d61"
+      UbuntuSV20: "ami-00399ec92321828f5"
+    ap-northeast-1:
+      AmaznLinux2: "ami-0701e21c502689c31"
+      UbuntuSV20: "ami-0df99b3a8349462c6"
+
+Resources: 
+#-- SecurityGroupを記載しましょう！ --
+  ec2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: ec2-sg
+      GroupDescription: SSH access
+      VpcId: !ImportValue VPCId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: ec2-sg
+
+
+#-- EC2インスタンスを起動させよう！ --
+  demoServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: "LabInstanceProfile"
+      ImageId:
+        Fn::FindInMap:
+          - "RegionMap"
+          - Ref: "AWS::Region"
+          - AmaznLinux2
+      InstanceType: t2.micro
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          SubnetId: !ImportValue PublicSubnet00
+          GroupSet:
+          - !Ref ec2SecurityGroup
+      Monitoring: true
+      UserData: !Base64 |
+        #!/bin/bash -ex
+        yum -y update
+        yum -y install httpd
+        systemctl enable httpd
+        systemctl start httpd
+        usermod -a -G apache ec2-user
+        chown -R ec2-user:apache /var/www
+        chmod 2775 /var/www
+      Tags:
+        - Key: Name
+          Value: demoServer
+
+Outputs:
+  VPC:
+    Value: !Ref ec2SecurityGroup
+    Export:
+      Name: ec2SecurityGroup

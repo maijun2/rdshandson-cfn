@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Metadata:
+
+
+Parameters: 
+
+
+Resources: 
+  #---- RDS Security Group----
+  rdsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: rds-sg
+      GroupDescription: ec2 to rds access 
+      VpcId: !ImportValue VPCId
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: !ImportValue ec2SecurityGroup
+          IpProtocol: -1
+      Tags:
+        - Key: Name
+          Value: rds-sg
+
+  #--- DBSubnetGroup
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Private subnet group for db's"
+      SubnetIds:
+        - !ImportValue PrivateSubnet01
+        - !ImportValue PrivateSubnet03
+      Tags:
+      - Key: Name
+        Value: DBSubnetGroup
+
+  #--- RDS ---
+  Database:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: 20
+      DBInstanceClass: db.t3.micro
+      AllowMajorVersionUpgrade: false
+      AutoMinorVersionUpgrade: false
+      AvailabilityZone: !Select 
+      - 0
+      - Fn::GetAZs: !Ref 'AWS::Region'
+      BackupRetentionPeriod: 0
+      DBInstanceIdentifier: !Ref DBInstanceName
+      DBName: !Ref DatabaseName
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      #DBParameterGroupName: !Ref DBParameterGroup  
+      Engine: mysql
+      EngineVersion: 8.0.20 
+      MasterUsername: !Ref DatabaseMasterName
+      MasterUserPassword: !Ref DatabaseMasterPassword
+      MultiAZ: false
+      PubliclyAccessible: false
+      StorageEncrypted: false
+      StorageType: gp2
+      VPCSecurityGroups:
+        - !Ref rdsSecurityGroup
+      Tags:
+        - Key: Name
+          Value: Database
