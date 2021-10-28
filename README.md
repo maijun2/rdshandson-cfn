@@ -1,0 +1,2 @@
+# ハンズオン資料
+RDSをCloudformationで設定するにあたってParametersの説明をするための参考資料です
